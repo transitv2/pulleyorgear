@@ -1,0 +1,258 @@
+import React, { useState, useEffect } from 'react';
+import { Trophy, RefreshCw, ThumbsUp } from 'lucide-react';
+
+const AnimatedMachine = ({ type, isActive }) => {
+  const [rotation, setRotation] = useState(0);
+  const [position, setPosition] = useState(0);
+  
+  useEffect(() => {
+    let animationFrame;
+    
+    const animate = () => {
+      if (isActive) {
+        setRotation(prev => (prev + 2) % 360);
+        setPosition(prev => {
+          const newPos = prev + 1;
+          return newPos > 100 ? 0 : newPos;
+        });
+      }
+      animationFrame = requestAnimationFrame(animate);
+    };
+    
+    if (isActive) {
+      animationFrame = requestAnimationFrame(animate);
+    }
+    
+    return () => cancelAnimationFrame(animationFrame);
+  }, [isActive]);
+
+  if (type === 'pulley') {
+    return (
+      <svg viewBox="0 0 200 200" className="w-32 h-32">
+        {/* Support structure */}
+        <rect x="90" y="20" width="20" height="30" fill="#666" />
+        
+        {/* Pulley wheel */}
+        <circle 
+          cx="100" 
+          cy="60" 
+          r="20" 
+          fill="#999"
+          style={{ transform: `rotate(${rotation}deg)`, transformOrigin: '100px 60px' }}
+        />
+        <circle cx="100" cy="60" r="3" fill="#666" />
+        
+        {/* Rope */}
+        <path
+          d={`M100,40 L100,${60 + position} L100,${120 + position}`}
+          stroke="#8B4513"
+          strokeWidth="4"
+          fill="none"
+        />
+        
+        {/* Weight */}
+        <rect
+          x="85"
+          y={100 + position}
+          width="30"
+          height="30"
+          fill="#c41e3a"
+        />
+      </svg>
+    );
+  }
+
+  return (
+    <svg viewBox="0 0 200 200" className="w-32 h-32">
+      {/* Large gear */}
+      <g style={{ transform: `rotate(${rotation}deg)`, transformOrigin: '80px 100px' }}>
+        <circle cx="80" cy="100" r="30" fill="#666" />
+        {[...Array(8)].map((_, i) => (
+          <rect
+            key={i}
+            x="75"
+            y="60"
+            width="10"
+            height="20"
+            fill="#666"
+            style={{ transform: `rotate(${i * 45}deg)`, transformOrigin: '80px 100px' }}
+          />
+        ))}
+      </g>
+      
+      {/* Small gear */}
+      <g style={{ transform: `rotate(${-rotation * 2}deg)`, transformOrigin: '130px 100px' }}>
+        <circle cx="130" cy="100" r="15" fill="#c41e3a" />
+        {[...Array(6)].map((_, i) => (
+          <rect
+            key={i}
+            x="127.5"
+            y="80"
+            width="5"
+            height="10"
+            fill="#c41e3a"
+            style={{ transform: `rotate(${i * 60}deg)`, transformOrigin: '130px 100px' }}
+          />
+        ))}
+      </g>
+    </svg>
+  );
+};
+
+const SimpleMachinesGame = () => {
+  const [score, setScore] = useState(0);
+  const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [feedback, setFeedback] = useState({ correct: false, message: '' });
+  const [isAnimating, setIsAnimating] = useState(true);
+
+  const questions = [
+    {
+      name: "Elevator",
+      correct: "pulley",
+      explanation: "Elevators use pulleys to lift heavy loads up and down buildings, just like our animation shows!"
+    },
+    {
+      name: "Bicycle Chain and Sprocket",
+      correct: "gear",
+      explanation: "Bicycles use gears to transfer power from the pedals to the wheels, making it easier or harder to pedal!"
+    },
+    {
+      name: "Construction Crane",
+      correct: "pulley",
+      explanation: "Cranes use pulleys to lift heavy materials, reducing the force needed to lift them!"
+    },
+    {
+      name: "Clock Mechanism",
+      correct: "gear",
+      explanation: "Clocks use a system of gears to convert fast movement into precise, slow movements for the hands!"
+    },
+    {
+      name: "Flag Pole",
+      correct: "pulley",
+      explanation: "Flag poles use pulleys to make raising and lowering flags easier, just like our animation!"
+    }
+  ];
+
+  const handleAnswer = (answer) => {
+    const currentQ = questions[currentQuestion];
+    const isCorrect = answer === currentQ.correct;
+    
+    setFeedback({
+      correct: isCorrect,
+      message: isCorrect ? 
+        `Correct! ${currentQ.explanation}` : 
+        `Try again! Watch how ${currentQ.name} works in the animation.`
+    });
+    
+    setShowFeedback(true);
+    
+    if (isCorrect) {
+      setScore(score + 1);
+      setTimeout(() => {
+        setShowFeedback(false);
+        if (currentQuestion < questions.length - 1) {
+          setCurrentQuestion(currentQuestion + 1);
+        }
+      }, 3000);
+    } else {
+      setTimeout(() => {
+        setShowFeedback(false);
+      }, 3000);
+    }
+  };
+
+  const resetGame = () => {
+    setScore(0);
+    setCurrentQuestion(0);
+    setShowFeedback(false);
+    setIsAnimating(true);
+  };
+
+  const isGameComplete = currentQuestion === questions.length - 1 && feedback.correct;
+
+  return (
+    <div className="w-full max-w-4xl p-6 bg-white rounded-lg shadow-lg">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold text-blue-600">Simple Machines Game</h1>
+        <div className="flex items-center gap-2">
+          <Trophy className="text-yellow-500" />
+          <span className="text-xl font-bold">{score}/{questions.length}</span>
+        </div>
+      </div>
+
+      {!isGameComplete ? (
+        <div className="space-y-8">
+          <div className="bg-gray-100 p-6 rounded-lg">
+            <div className="text-center mb-4">
+              <h2 className="text-xl font-bold">What type of simple machine is used in a...</h2>
+              <div className="mt-4">
+                <h3 className="text-2xl font-bold text-blue-800 mb-4">
+                  {questions[currentQuestion].name}
+                </h3>
+                <div className="flex justify-center gap-8">
+                  <div className="text-center">
+                    <AnimatedMachine type="pulley" isActive={isAnimating} />
+                    <p className="mt-2 font-bold">Pulley</p>
+                  </div>
+                  <div className="text-center">
+                    <AnimatedMachine type="gear" isActive={isAnimating} />
+                    <p className="mt-2 font-bold">Gear</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-center gap-4 mt-8">
+              <button
+                onClick={() => handleAnswer('pulley')}
+                className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
+                disabled={showFeedback}
+              >
+                It's a Pulley!
+              </button>
+              <button
+                onClick={() => handleAnswer('gear')}
+                className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition"
+                disabled={showFeedback}
+              >
+                It's a Gear!
+              </button>
+            </div>
+          </div>
+
+          {showFeedback && (
+            <div className={`p-4 rounded-lg text-center ${feedback.correct ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+              <div className="flex items-center justify-center gap-2">
+                <ThumbsUp className={feedback.correct ? 'text-green-500' : 'text-red-500'} />
+                <p className="text-lg font-semibold">{feedback.message}</p>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="text-center space-y-6 p-8 bg-blue-50 rounded-lg">
+          <h2 className="text-3xl font-bold text-blue-800">Congratulations! 🎉</h2>
+          <p className="text-xl">You've mastered simple machines with a score of {score}/{questions.length}!</p>
+          <button
+            onClick={resetGame}
+            className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition flex items-center gap-2 mx-auto"
+          >
+            <RefreshCw /> Play Again
+          </button>
+        </div>
+      )}
+
+      <div className="mt-8 p-4 bg-gray-50 rounded-lg">
+        <h3 className="font-bold mb-2">Remember:</h3>
+        <ul className="list-disc pl-5 space-y-2 text-gray-700">
+          <li>Pulleys use a wheel and rope to lift things up and down</li>
+          <li>Gears are toothed wheels that work together to transfer motion</li>
+          <li>Both machines help us do work with less effort!</li>
+        </ul>
+      </div>
+    </div>
+  );
+};
+
+export default SimpleMachinesGame;
